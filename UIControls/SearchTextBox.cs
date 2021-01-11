@@ -14,9 +14,11 @@ using System.Windows.Shapes;
 using System.Timers;
 using System.Windows.Threading;
 using System.Windows.Controls.Primitives;
+using System.ComponentModel;
 
 //TODO 1.历史记录怎样保存
 //TODO 2.怎样在历史记录存在的情况下，自动填充搜索关键字——即过滤历史对话框，在匹配项多余1项时展开历史对话框
+//TODO 3.按WPF-SearchTextBox项目 修改鼠标hover停留到清除按钮以及下拉按钮时的样式
 
 namespace UIControls
 {
@@ -112,7 +114,18 @@ namespace UIControls
             base.OnTextChanged(e);
 
             HasText = Text.Length != 0;
-            HidePopup();
+            //创建FilterView
+            var previousKeyWordList = this.m_listPreviousItem.Items.Cast<string>().ToList();
+            ICollectionView collectionView = CollectionViewSource.GetDefaultView(previousKeyWordList);
+
+            if (collectionView.IsEmpty)
+            {
+                HidePopup();
+            }
+            else
+            {
+                ShowPopup(m_listPreviousItem);
+            }
 
             //文字改变即开始搜索
             if (HasText)
