@@ -15,42 +15,49 @@ using System.Timers;
 using System.Windows.Threading;
 using System.Windows.Controls.Primitives;
 
-namespace UIControls {
+//TODO 1.历史记录怎样保存
+//TODO 2.怎样在历史记录存在的情况下，自动填充搜索关键字——即过滤历史对话框，在匹配项多余1项时展开历史对话框
 
+namespace UIControls
+{
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     /// @class  SearchEventArgs
     ///
-    /// @brief  Additional information for search events. 
+    /// @brief  Additional information for search events.
     ///
     /// @author Le Duc Anh
     /// @date   8/14/2010
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    public class SearchEventArgs: RoutedEventArgs{
-        private string m_keyword="";
+    public class SearchEventArgs : RoutedEventArgs
+    {
+        private string m_keyword = "";
 
         public string Keyword
         {
             get { return m_keyword; }
             set { m_keyword = value; }
         }
-        private List<string> m_sections= new List<string>();
+
+        private List<string> m_sections = new List<string>();
 
         public List<string> Sections
         {
             get { return m_sections; }
             set { m_sections = value; }
-        } 
-        public SearchEventArgs(): base(){
-
         }
-        public SearchEventArgs(RoutedEvent routedEvent): base(routedEvent){
 
+        public SearchEventArgs() : base()
+        {
+        }
+
+        public SearchEventArgs(RoutedEvent routedEvent) : base(routedEvent)
+        {
         }
     }
 
-    public class SearchTextBox : TextBox {
-
+    public class SearchTextBox : TextBox
+    {
         public static DependencyProperty LabelTextProperty =
             DependencyProperty.Register(
                 "LabelText",
@@ -69,6 +76,7 @@ namespace UIControls {
                 typeof(bool),
                 typeof(SearchTextBox),
                 new PropertyMetadata());
+
         public static DependencyProperty HasTextProperty = HasTextPropertyKey.DependencyProperty;
 
         private static DependencyPropertyKey IsMouseLeftButtonDownPropertyKey =
@@ -77,43 +85,51 @@ namespace UIControls {
                 typeof(bool),
                 typeof(SearchTextBox),
                 new PropertyMetadata());
+
         public static DependencyProperty IsMouseLeftButtonDownProperty = IsMouseLeftButtonDownPropertyKey.DependencyProperty;
 
-        public static readonly RoutedEvent SearchEvent = 
+        public static readonly RoutedEvent SearchEvent =
             EventManager.RegisterRoutedEvent(
                 "Search",
                 RoutingStrategy.Bubble,
                 typeof(RoutedEventHandler),
                 typeof(SearchTextBox));
 
-        static SearchTextBox() {
+        static SearchTextBox()
+        {
             DefaultStyleKeyProperty.OverrideMetadata(
                 typeof(SearchTextBox),
                 new FrameworkPropertyMetadata(typeof(SearchTextBox)));
         }
 
         public SearchTextBox()
-            : base() {
-
+            : base()
+        {
         }
 
-
-        protected override void OnTextChanged(TextChangedEventArgs e) {
+        protected override void OnTextChanged(TextChangedEventArgs e)
+        {
             base.OnTextChanged(e);
-            
+
             HasText = Text.Length != 0;
             HidePopup();
+
+            //文字改变即开始搜索
+            if (HasText)
+            {
+                PureRaiseSearchEvent();
+            }
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         /// @fn protected override void OnMouseDown(MouseButtonEventArgs e)
         ///
-        /// @brief  Override the default method. 
+        /// @brief  Override the default method.
         ///
         /// @author Le Duc Anh
         /// @date   8/14/2010
         ///
-        /// @param  e   Event information to send to registered event handlers. 
+        /// @param  e   Event information to send to registered event handlers.
         ////////////////////////////////////////////////////////////////////////////////////////////////////
 
         protected override void OnMouseDown(MouseButtonEventArgs e)
@@ -121,17 +137,19 @@ namespace UIControls {
             base.OnMouseDown(e);
 
             // if users click on the editing area, the pop up will be hidden
-            Type sourceType=e.OriginalSource.GetType();
-            if (sourceType!= typeof(Image))
+            Type sourceType = e.OriginalSource.GetType();
+            if (sourceType != typeof(Image))
                 HidePopup();
         }
 
-        public override void OnApplyTemplate() {
+        public override void OnApplyTemplate()
+        {
             base.OnApplyTemplate();
 
             this.MouseLeave += new MouseEventHandler(SearchTextBox_MouseLeave);
             Border iconBorder = GetTemplateChild("PART_SearchIconBorder") as Border;
-            if (iconBorder != null) {
+            if (iconBorder != null)
+            {
                 iconBorder.MouseLeftButtonDown += new MouseButtonEventHandler(IconBorder_MouseLeftButtonDown);
                 iconBorder.MouseLeftButtonUp += new MouseButtonEventHandler(IconBorder_MouseLeftButtonUp);
                 iconBorder.MouseLeave += new MouseEventHandler(IconBorder_MouseLeave);
@@ -139,7 +157,8 @@ namespace UIControls {
             }
 
             int size = 0;
-            if(ShowSectionButton){
+            if (ShowSectionButton)
+            {
                 iconBorder = GetTemplateChild("PART_SpecifySearchType") as Border;
                 if (iconBorder != null)
                 {
@@ -148,121 +167,160 @@ namespace UIControls {
                 size = 15;
             }
             Image iconChoose = GetTemplateChild("SpecifySearchType") as Image;
-            if(iconChoose!=null)
+            if (iconChoose != null)
                 iconChoose.Width = iconChoose.Height = size;
 
             iconBorder = GetTemplateChild("PART_PreviousItem") as Border;
-            if(iconBorder!=null)
+            if (iconBorder != null)
                 iconBorder.MouseDown += new MouseButtonEventHandler(PreviousItem_MouseDown);
 
             //////////////////////////////////////////////////////////////////////////
         }
 
-        void SearchIcon_MouseDown(object sender, MouseButtonEventArgs e)
+        private void SearchIcon_MouseDown(object sender, MouseButtonEventArgs e)
         {
             HidePopup();
         }
 
-
-
-        void SearchTextBox_MouseLeave(object sender, MouseEventArgs e)
+        private void SearchTextBox_MouseLeave(object sender, MouseEventArgs e)
         {
             if (!m_listPopup.IsMouseOver)
                 HidePopup();
         }
 
-
-
-
-        private void IconBorder_MouseLeftButtonDown(object obj, MouseButtonEventArgs e) {
+        private void IconBorder_MouseLeftButtonDown(object obj, MouseButtonEventArgs e)
+        {
             IsMouseLeftButtonDown = true;
-
         }
 
-        private void IconBorder_MouseLeftButtonUp(object obj, MouseButtonEventArgs e) {
+        private void IconBorder_MouseLeftButtonUp(object obj, MouseButtonEventArgs e)
+        {
             if (!IsMouseLeftButtonDown) return;
 
-            if (HasText ) {
-                RaiseSearchEvent();
-            }
-
-            IsMouseLeftButtonDown = false;
-        }
-
-        private void IconBorder_MouseLeave(object obj, MouseEventArgs e) {
-            IsMouseLeftButtonDown = false;
-            
-        }
-
-        protected override void OnKeyDown(KeyEventArgs e) {
-            if (e.Key == Key.Escape) {
+            if (HasText)
+            {
+                //RaiseSearchEvent();
+                //清除搜索文字
                 this.Text = "";
             }
-            else if ((e.Key == Key.Return || e.Key == Key.Enter)) {
+
+            IsMouseLeftButtonDown = false;
+        }
+
+        private void IconBorder_MouseLeave(object obj, MouseEventArgs e)
+        {
+            IsMouseLeftButtonDown = false;
+        }
+
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            if (e.Key == Key.Escape)
+            {
+                this.Text = "";
+            }
+            else if ((e.Key == Key.Return || e.Key == Key.Enter))
+            {
                 RaiseSearchEvent();
             }
-            else {
+            else
+            {
                 base.OnKeyDown(e);
             }
         }
 
-        private void RaiseSearchEvent() {
+        /// <summary>
+        /// 启动搜索
+        /// </summary>
+        private void PureRaiseSearchEvent()
+        {
             if (this.Text == "")
                 return;
-            if(!m_listPreviousItem.Items.Contains(this.Text))
-                m_listPreviousItem.Items.Add(this.Text);
-
 
             SearchEventArgs args = new SearchEventArgs(SearchEvent);
             args.Keyword = this.Text;
-            if(m_listSection != null){
+            if (m_listSection != null)
+            {
                 args.Sections = (List<string>)m_listSection.SelectedItems.Cast<string>().ToList();
             }
             RaiseEvent(args);
         }
 
-        public string LabelText {
+        /// <summary>
+        /// 启动搜索 把搜索词加入到最近列表
+        /// </summary>
+        private void RaiseSearchEvent()
+        {
+            if (this.Text == "")
+                return;
+
+            //Done 1.列表鼠标Move时的响应 在ListBoxEx中更改
+            // 参考 https://stackoverflow.com/questions/21972818/listbox-mouse-over-background-color
+
+            //x 2.使用Most Recently Used代替
+
+            //如果包含 则先删除原来的 再插入
+            if (m_listPreviousItem.Items.Contains(this.Text))
+            {
+                m_listPreviousItem.Items.Remove(this.Text);
+            }
+            m_listPreviousItem.Items.Insert(0, this.Text);
+
+            SearchEventArgs args = new SearchEventArgs(SearchEvent);
+            args.Keyword = this.Text;
+            if (m_listSection != null)
+            {
+                args.Sections = (List<string>)m_listSection.SelectedItems.Cast<string>().ToList();
+            }
+            RaiseEvent(args);
+        }
+
+        public string LabelText
+        {
             get { return (string)GetValue(LabelTextProperty); }
             set { SetValue(LabelTextProperty, value); }
         }
 
-        public Brush LabelTextColor {
+        public Brush LabelTextColor
+        {
             get { return (Brush)GetValue(LabelTextColorProperty); }
             set { SetValue(LabelTextColorProperty, value); }
         }
 
-        public bool HasText {
+        public bool HasText
+        {
             get { return (bool)GetValue(HasTextProperty); }
             private set { SetValue(HasTextPropertyKey, value); }
         }
 
-        public bool IsMouseLeftButtonDown {
+        public bool IsMouseLeftButtonDown
+        {
             get { return (bool)GetValue(IsMouseLeftButtonDownProperty); }
             private set { SetValue(IsMouseLeftButtonDownPropertyKey, value); }
         }
 
-        public event RoutedEventHandler OnSearch {
+        public event RoutedEventHandler OnSearch
+        {
             add { AddHandler(SearchEvent, value); }
             remove { RemoveHandler(SearchEvent, value); }
         }
 
-#region Stuff added by Le Duc Anh
+        #region Stuff added by Le Duc Anh
 
         public static DependencyProperty SectionsListProperty =
             DependencyProperty.Register(
                 "SectionsList",
                 typeof(List<string>),
                 typeof(SearchTextBox),
-                new FrameworkPropertyMetadata(  null, 
+                new FrameworkPropertyMetadata(null,
                                                 FrameworkPropertyMetadataOptions.None)
              );
 
         public List<string> SectionsList
         {
             get { return (List<string>)GetValue(SectionsListProperty); }
-            set { 
+            set
+            {
                 SetValue(SectionsListProperty, value);
-
             }
         }
 
@@ -271,9 +329,9 @@ namespace UIControls {
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         /// @property   public bool ShowSectionButton
         ///
-        /// @brief  Gets or sets a value indicating whether the choose section button is shown. 
+        /// @brief  Gets or sets a value indicating whether the choose section button is shown.
         ///
-        /// @return true if show choose section button, false if not. 
+        /// @return true if show choose section button, false if not.
         ////////////////////////////////////////////////////////////////////////////////////////////////////
 
         public bool ShowSectionButton
@@ -291,15 +349,16 @@ namespace UIControls {
             CheckBoxStyle,
             RadioBoxStyle
         }
+
         private SectionsStyles m_itemStyle = SectionsStyles.CheckBoxStyle;
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         /// @property   public SectionsStyles ItemStyle
         ///
         /// @brief  Gets or sets the style's of each displayed section. This property is valid when
-        ///         ShowSectionButton is set to true. 
+        ///         ShowSectionButton is set to true.
         ///
-        /// @return The item style. 
+        /// @return The item style.
         ////////////////////////////////////////////////////////////////////////////////////////////////////
 
         public SectionsStyles SectionsStyle
@@ -307,6 +366,7 @@ namespace UIControls {
             get { return m_itemStyle; }
             set { m_itemStyle = value; }
         }
+
         private Popup m_listPopup = new Popup();
         private ListBoxEx m_listSection = null;
         private ListBoxEx m_listPreviousItem = null;
@@ -328,6 +388,21 @@ namespace UIControls {
             m_listPopup.PlacementTarget = this;
             m_listPopup.PlacementRectangle = new Rect(0, this.ActualHeight, 30, 30);
             m_listPopup.Width = this.ActualWidth;
+
+            //限制popup的最大高度
+            m_listPopup.MaxHeight = 120;
+
+            //添加 设置popup的初始高度
+
+            if (this.ActualHeight > 10)
+            {
+                m_listPopup.MinHeight = this.ActualHeight;
+            }
+            else
+            {
+                m_listPopup.MinHeight = 90;
+            }
+
             // initialize the sections' list
             if (ShowSectionButton)
             {
@@ -337,14 +412,13 @@ namespace UIControls {
                 m_listSection.Items.Clear();
                 // add items into the list
                 // is there any smarter way?
-                if(SectionsList!=null)
+                if (SectionsList != null)
                     foreach (string item in SectionsList)
                         m_listSection.Items.Add(item);
                 //////////////////////////////////////////////////////////////////////////
 
                 m_listSection.Width = this.Width;
                 m_listSection.MouseLeave += new MouseEventHandler(ListSection_MouseLeave);
-
             }
 
             // initialize the previous items' list
@@ -357,7 +431,7 @@ namespace UIControls {
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         /// @fn private void HidePopup()
         ///
-        /// @brief  Hides the pop up. 
+        /// @brief  Hides the pop up.
         ///
         /// @author Le Duc Anh
         /// @date   8/14/2010
@@ -371,12 +445,12 @@ namespace UIControls {
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         /// @fn private void ShowPopup(UIElement item)
         ///
-        /// @brief  Shows the pop up. 
+        /// @brief  Shows the pop up.
         ///
         /// @author Le Duc Anh
         /// @date   8/14/2010
         ///
-        /// @param  item    The item. 
+        /// @param  item    The item.
         ////////////////////////////////////////////////////////////////////////////////////////////////////
 
         private void ShowPopup(UIElement item)
@@ -385,22 +459,21 @@ namespace UIControls {
 
             m_listPopup.Child = item;
             m_listPopup.IsOpen = true;
-
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         /// @fn void ListPreviousItem_SelectionChanged(object sender, SelectionChangedEventArgs e)
         ///
-        /// @brief  Event handler. Called by m_listPreviousItem for selection changed events. 
+        /// @brief  Event handler. Called by m_listPreviousItem for selection changed events.
         ///
         /// @author Le Duc Anh
         /// @date   8/14/2010
         ///
-        /// @param  sender  Source of the event. 
-        /// @param  e       Selection changed event information. 
+        /// @param  sender  Source of the event.
+        /// @param  e       Selection changed event information.
         ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        void ListPreviousItem_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void ListPreviousItem_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             // fetch the previous keyword into the text box
             this.Text = m_listPreviousItem.SelectedItems[0].ToString();
@@ -414,16 +487,16 @@ namespace UIControls {
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         /// @fn void ListPreviousItem_MouseLeave(object sender, MouseEventArgs e)
         ///
-        /// @brief  Event handler. Called by m_listPreviousItem for mouse leave events. 
+        /// @brief  Event handler. Called by m_listPreviousItem for mouse leave events.
         ///
         /// @author Le Duc Anh
         /// @date   8/14/2010
         ///
-        /// @param  sender  Source of the event. 
-        /// @param  e       Mouse event information. 
+        /// @param  sender  Source of the event.
+        /// @param  e       Mouse event information.
         ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        void ListPreviousItem_MouseLeave(object sender, MouseEventArgs e)
+        private void ListPreviousItem_MouseLeave(object sender, MouseEventArgs e)
         {
             // close the pop up
             HidePopup();
@@ -433,34 +506,37 @@ namespace UIControls {
         /// @fn void PreviousItem_MouseDown(object sender, MouseButtonEventArgs e)
         ///
         /// @brief  Event handler. Called by PreviousItem for mouse down events, showing previously typed
-        ///         keywords. 
+        ///         keywords.
         ///
         /// @author Le Duc Anh
         /// @date   8/14/2010
         ///
-        /// @param  sender  Source of the event. 
-        /// @param  e       Mouse button event information. 
+        /// @param  sender  Source of the event.
+        /// @param  e       Mouse button event information.
         ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        void PreviousItem_MouseDown(object sender, MouseButtonEventArgs e)
+        private void PreviousItem_MouseDown(object sender, MouseButtonEventArgs e)
         {
             if (m_listPreviousItem.Items.Count != 0)
-                ShowPopup(m_listPreviousItem);
+            {
+            }
+            //修改 不管等不等于0 都弹出
+            ShowPopup(m_listPreviousItem);
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         /// @fn void ListSection_MouseLeave(object sender, MouseEventArgs e)
         ///
-        /// @brief  Event handler. Called by m_listSection for mouse leave events. 
+        /// @brief  Event handler. Called by m_listSection for mouse leave events.
         ///
         /// @author Le Duc Anh
         /// @date   8/14/2010
         ///
-        /// @param  sender  Source of the event. 
-        /// @param  e       Mouse event information. 
+        /// @param  sender  Source of the event.
+        /// @param  e       Mouse event information.
         ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        void ListSection_MouseLeave(object sender, MouseEventArgs e)
+        private void ListSection_MouseLeave(object sender, MouseEventArgs e)
         {
             // close the pop up
             HidePopup();
@@ -469,18 +545,17 @@ namespace UIControls {
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         /// @fn void ChooseSection_MouseDown(object sender, MouseButtonEventArgs e)
         ///
-        /// @brief  Event handler. Called by ChooseSection for mouse down events. 
+        /// @brief  Event handler. Called by ChooseSection for mouse down events.
         ///
         /// @author Le Duc Anh
         /// @date   8/14/2010
         ///
-        /// @param  sender  Source of the event. 
-        /// @param  e       Mouse button event information. 
+        /// @param  sender  Source of the event.
+        /// @param  e       Mouse button event information.
         ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        void ChooseSection_MouseDown(object sender, MouseButtonEventArgs e)
+        private void ChooseSection_MouseDown(object sender, MouseButtonEventArgs e)
         {
-
             if (SectionsList == null)
                 return;
             if (SectionsList.Count != 0)
@@ -502,7 +577,6 @@ namespace UIControls {
             if (!HasText)
                 this.LabelText = "";
             m_listPopup.StaysOpen = true;
-
         }
 
         protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
@@ -511,9 +585,6 @@ namespace UIControls {
             BuildPopup();
         }
 
-
-
-
-#endregion
+        #endregion Stuff added by Le Duc Anh
     }
 }
